@@ -9,7 +9,7 @@
 ## 目录结构
 - GAServer：基本库代码，主要是gate模块和service类型的封装
 - Robot:机器人测试代码，robotMachine是压力测试，robotTest是简单功能测试
-- Server：里面是各种服务的实现
+- Server：里面是各种服务的实现。服务器的具体实现目录
 
 
 ## 登录流程
