@@ -10,7 +10,10 @@
 - GAServer：基本库代码，主要是gate模块和service类型的封装
 - Robot:机器人测试代码，robotMachine是压力测试，robotTest是简单功能测试
 - Server：里面是各种服务的实现。服务器的具体实现目录
-
+## 启动
+- win编译出server执行文件
+- 可以直接执行server，默认读取config.json配置，所有服务在一个进程
+- 或者执行StartMultiServer.bat，启多个进程服务器,服务分开部署
 
 ## 登录流程
 红色为单点，其他都是多点。
