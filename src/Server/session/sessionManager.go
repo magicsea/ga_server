@@ -23,11 +23,11 @@ func (mgr *SessionManager) GetSession(uid uint64) *PlayerSession {
 func (mgr *SessionManager) GetSessionByName(name string) *PlayerSession {
 	return mgr.name2players[name]
 }
-func (mgr *SessionManager) RemoveSession(uid uint64) {
+func (mgr *SessionManager) RemoveSession(uid uint64) *PlayerSession {
 	ss := mgr.GetSession(uid)
 	delete(mgr.players, uid)
 	if ss != nil {
 		delete(mgr.name2players, ss.userInfo.Name)
 	}
-
+	return ss
 }

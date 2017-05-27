@@ -1,10 +1,11 @@
 package app
 
 import (
-	"GAServer/cluster"
 	. "GAServer/config"
 	"GAServer/log"
+	"GAServer/module"
 	"GAServer/service"
+	"GAServer/util"
 	"os"
 	"os/signal"
 )
@@ -14,6 +15,7 @@ type MakeServiceFunc func() service.IService
 var (
 	serviceTypeMap map[string]MakeServiceFunc
 	services       []service.IService
+	modules        []module.IModule
 )
 
 func init() {
@@ -24,8 +26,9 @@ func RegisterService(serviceType string, f MakeServiceFunc) {
 	serviceTypeMap[serviceType] = f
 }
 
-func Run(conf *ServiceConfig) {
+func Run(conf *ServiceConfig, ms ...module.IModule) {
 	SetGlobleConfig(conf)
+
 	//init log
 	if conf.LogConf.LogLevel != "" {
 		err := log.NewLogGroup(conf.LogConf.LogLevel, conf.LogConf.LogPath, true, conf.LogConf.LogFlag)
@@ -35,8 +38,20 @@ func Run(conf *ServiceConfig) {
 		//log.Export(logger)
 		defer log.Close()
 	}
+
+	defer util.PrintPanicStack()
+
 	log.Info("log started.")
-	cluster.InitCluster()
+	modules = ms
+	for _, m := range modules {
+		if !m.OnInit() {
+			log.Fatal("%v module.OnInit fail", m)
+		}
+	}
+	for _, m := range modules {
+		m.Run()
+	}
+	//cluster.InitCluster()
 	//生成服务对象
 	for _, sc := range conf.Services {
 		makefunc := serviceTypeMap[sc.ServiceType]
@@ -75,5 +90,7 @@ func OnDestory() {
 		log.Println("destory服务:", ser.GetName())
 		ser.OnDestory()
 	}
-
+	for _, m := range modules {
+		m.OnDestroy()
+	}
 }

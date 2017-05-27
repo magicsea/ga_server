@@ -1,0 +1,34 @@
+syntax = "proto3";
+package gameproto;
+//http登录结果
+message UserLoginResult {
+	uint32 uid = 1;
+	string gateAddr = 2;
+	string key = 3;
+	int32 result = 4;
+}
+
+
+message PlatformUser {
+    enum PlatformType {
+        Engine = 0;
+        DEVICE = 99;
+
+    }
+    string platformId=1;
+    PlatformType platform=2;
+    string platformSession=3;
+    int32 platformUid=4;
+    int32 serverID=5;
+    string channelId=6;
+    int32 version=7;
+    string key = 8;
+}
+
+
+message LoginReturn {
+    int32 errCode=1;
+    int32 serverTime=2;
+    string args=3;
+    int32 bFirst=4;
+}

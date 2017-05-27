@@ -1,9 +1,10 @@
 package main
 
 import (
-	"GAServer/messages"
 	"GAServer/network"
 	"fmt"
+	"gameproto"
+	_ "gameproto/msgs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -43,20 +44,20 @@ func (robot *Robot) Start() {
 func (robot *Robot) Login() bool {
 	fmt.Println("login...")
 
-	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:8080/login?a=%s&p=111", robot.account))
+	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:9900/login?a=%s&p=111", robot.account))
 	if err != nil {
 		log.Fatalln("login http.get fail:", err)
 		return false
 	}
 	defer response.Body.Close()
 	body, _ := ioutil.ReadAll(response.Body)
-	result := messages.UserLoginResult{}
+	result := gameproto.UserLoginResult{}
 	umErr := proto.Unmarshal(body, &result)
 	fmt.Println("err:", umErr, "  result:", result)
-	robot.uid = result.Uid
+	robot.uid = uint64(result.Uid)
 	robot.key = result.Key
 	robot.gateAddr = result.GateAddr
-	return result.GetResult() == messages.OK
+	return result.GetResult() == int32(gameproto.OK)
 }
 
 func (robot *Robot) newAgent(conn *network.TCPConn) network.Agent {
@@ -72,6 +73,7 @@ func (robot *Robot) ConnectGate() {
 	robot.client = new(network.TCPClient)
 	robot.client.Addr = robot.gateAddr
 	robot.client.NewAgent = robot.newAgent
+	robot.client.LittleEndian = true
 	robot.client.Start()
 
 }
@@ -79,56 +81,91 @@ func (robot *Robot) ConnectGate() {
 func (robot *Robot) OnConnected() {
 	fmt.Println("OnConnected...")
 
-	robot.SendMsg(messages.Login, 0, &messages.CheckLogin{robot.uid, robot.key})
+	robot.SendMsg(0, &gameproto.PlatformUser{PlatformUid: int32(robot.uid), Key: robot.key})
 }
 
 func (robot *Robot) EnterGame() {
 	fmt.Println("EnterGame...")
-	robot.SendMsg(messages.Shop, byte(messages.C2S_ShopBuy), &messages.C2S_ShopBuyMsg{1})
-	//robot.SendMsg(messages.Chat, byte(messages.C2S_PrivateChat), &messages.C2S_PrivateChatMsg{"玩家11", "hello"})
-	//robot.SendMsg(messages.Chat, byte(messages.C2S_WorldChat), &messages.C2S_WorldChatMsg{"world"})
+	robot.SendMsg(byte(gameproto.C2S_Test), &gameproto.C2S_TestMsg{Id: 1})
+	//robot.SendMsg(gameproto.Chat, byte(gameproto.C2S_PrivateChat), &gameproto.C2S_PrivateChatMsg{"玩家11", "hello"})
+	//robot.SendMsg(gameproto.Chat, byte(gameproto.C2S_WorldChat), &gameproto.C2S_WorldChatMsg{"world"})
 }
 
 func (robot *Robot) OnMsgRecv(channel byte, msgId byte, data []byte) {
-	c := messages.ChannelType(channel)
+	c := 0 //gameproto.ChannelType(channel)
 	fmt.Println("OnMsgRecv:", c, " msg:", msgId, " data:", len(data))
-	if c == messages.Login {
-		msg := messages.CheckLoginResult{}
+
+	tmsgId := gameproto.GS2C_CMD(msgId)
+	switch tmsgId {
+	case gameproto.S2C_CONFIRM:
+		msg := gameproto.S2C_ConfirmInfo{}
+		proto.Unmarshal(data, &msg)
+		fmt.Println("S2C_CONFIRM:", msg)
+	case gameproto.S2C_LOGIN_END:
+		msg := gameproto.LoginReturn{}
 		proto.Unmarshal(data, &msg)
 		fmt.Println("login result:", msg)
-		if msg.Result == messages.OK {
+		if msg.ErrCode == int32(gameproto.OK) {
 			robot.EnterGame()
 		}
-	} else if c == messages.Shop {
-		tmsgId := messages.ShopMsgType(msgId)
-		switch tmsgId {
-		case messages.S2C_ShopBuy:
-			msg := messages.S2C_ShopBuyMsg{}
-			proto.Unmarshal(data, &msg)
-			fmt.Println("shop result:", msg)
-			time.Sleep(1)
-			robot.SendMsg(messages.Shop, byte(messages.C2S_ShopBuy), &messages.C2S_ShopBuyMsg{1})
-		}
-	} else if c == messages.Chat {
-		tmsgId := messages.ChatMsgType(msgId)
-		switch tmsgId {
-		case messages.S2C_PrivateChat:
-			msg := messages.S2C_PrivateChatMsg{}
-			proto.Unmarshal(data, &msg)
-			fmt.Println("chat back result:", msg)
-		case messages.S2C_PrivateOtherChat:
-			msg := messages.S2C_PrivateOtherChatMsg{}
-			proto.Unmarshal(data, &msg)
-			fmt.Println("otherchat:", msg)
-		case messages.S2C_WorldChat:
-			msg := messages.S2C_WorldChatMsg{}
-			proto.Unmarshal(data, &msg)
-			fmt.Println("worldchat :", msg)
-		}
+	case gameproto.S2C_Test:
+		msg := gameproto.S2C_TestMsg{}
+		proto.Unmarshal(data, &msg)
+		fmt.Println("shop result:", msg)
+		time.Sleep(time.Second)
+		robot.SendMsg(byte(gameproto.C2S_Test), &gameproto.C2S_TestMsg{Id: 1})
 	}
+
+	return
+	/*
+		if c == gameproto.Login {
+			msg := gameproto.CheckLoginResult{}
+			proto.Unmarshal(data, &msg)
+			fmt.Println("login result:", msg)
+			if msg.Result == gameproto.OK {
+				robot.EnterGame()
+			}
+		} else if c == gameproto.Shop {
+			tmsgId := gameproto.GS2C_CMD(msgId)
+			switch tmsgId {
+			case gameproto.S2C_SHOP_CARD_INFO:
+				msg := gameproto.S2C_ShopBuyMsg{}
+				proto.Unmarshal(data, &msg)
+				fmt.Println("shop result:", msg)
+				time.Sleep(time.Second)
+				robot.SendMsg(byte(gameproto.C2S_SHOP_BUY), &gameproto.C2S_ShopBuyMsg{1})
+			}
+		} else if c == gameproto.Chat {
+			tmsgId := gameproto.ChatMsgType(msgId)
+			switch tmsgId {
+			case gameproto.S2C_PrivateChat:
+				msg := gameproto.S2C_PrivateChatMsg{}
+				proto.Unmarshal(data, &msg)
+				fmt.Println("chat back result:", msg)
+			case gameproto.S2C_PrivateOtherChat:
+				msg := gameproto.S2C_PrivateOtherChatMsg{}
+				proto.Unmarshal(data, &msg)
+				fmt.Println("otherchat:", msg)
+			case gameproto.S2C_WorldChat:
+				msg := gameproto.S2C_WorldChatMsg{}
+				proto.Unmarshal(data, &msg)
+				fmt.Println("worldchat :", msg)
+			}
+		}
+	*/
 }
 
-func (robot *Robot) SendMsg(channel messages.ChannelType, msgId byte, pb proto.Message) {
+func (robot *Robot) SendMsg(msgId byte, pb proto.Message) {
+	data, err := proto.Marshal(pb)
+	if err != nil {
+		fmt.Println("###EncodeMsg error:", err)
+		return
+	}
+	robot.agent.WriteMsg(msgId, data)
+}
+
+/*
+func (robot *Robot) SendMsg(channel gameproto.ChannelType, msgId byte, pb proto.Message) {
 	data, err := proto.Marshal(pb)
 	if err != nil {
 		fmt.Println("###EncodeMsg error:", err)
@@ -136,3 +173,4 @@ func (robot *Robot) SendMsg(channel messages.ChannelType, msgId byte, pb proto.M
 	}
 	robot.agent.WriteMsg(byte(channel), msgId, data)
 }
+*/

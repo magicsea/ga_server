@@ -1,7 +1,7 @@
 package center
 
 import (
-	"GAServer/messages"
+	"gameproto/msgs"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 )
@@ -13,13 +13,13 @@ type ServiceNode struct {
 	serviceType string
 	load        uint32 //负载
 	tmpload     uint32 //临时负载(本地增加，防止同时大量请求导致都在一个服的问题)
-	state       messages.ServiceState
+	state       msgs.ServiceState
 	//data        map[string]interface{}
-	values []*messages.ServiceValue //自定义属性
+	values []*msgs.ServiceValue //自定义属性
 }
 
 //更新服务
-func (node *ServiceNode) UpdateService(up messages.UploadService) {
+func (node *ServiceNode) UpdateService(up msgs.UploadService) {
 	node.load = up.Load
 	node.state = up.State
 	node.tmpload = 0

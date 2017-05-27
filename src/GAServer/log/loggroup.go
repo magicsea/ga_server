@@ -7,8 +7,14 @@ type LogGroup struct {
 }
 
 var gGroup *LogGroup
-var gLogger *Logger
 
+//var gLogger *Logger
+
+func init() {
+	gLogger, _ := New("debug", "", "", log.LstdFlags)
+	gGroup = new(LogGroup)
+	gGroup.loggers = append(gGroup.loggers, gLogger)
+}
 func NewLogGroup(strLevel string, pathname string, isStdout bool, flag int) error {
 
 	if pathname != "" {
@@ -34,7 +40,7 @@ func NewLogGroup(strLevel string, pathname string, isStdout bool, flag int) erro
 	}
 
 	if isStdout {
-		gLogger, _ = New(strLevel, "", "", log.LstdFlags)
+		gLogger, _ := New(strLevel, "", "", log.LstdFlags)
 		gGroup.loggers = append(gGroup.loggers, gLogger)
 	}
 	return nil
@@ -42,20 +48,20 @@ func NewLogGroup(strLevel string, pathname string, isStdout bool, flag int) erro
 
 func Debug(format string, a ...interface{}) {
 	for _, v := range gGroup.loggers {
-		v.Debug(format, a)
+		v.Debug(format, a...)
 	}
 }
 
 func Info(format string, a ...interface{}) {
 	for _, v := range gGroup.loggers {
-		v.Info(format, a)
+		v.Info(format, a...)
 	}
 }
 
 func Println(format string, a ...interface{}) {
 	//str := fmt.Sprint(a)
 	for _, v := range gGroup.loggers {
-		v.Info(format, a)
+		v.Info(format, a...)
 	}
 
 }
@@ -63,13 +69,13 @@ func Println(format string, a ...interface{}) {
 func Error(format string, a ...interface{}) {
 	//fmt.Println("Error  ", len(gGroup.loggers), gGroup.loggers)
 	for _, v := range gGroup.loggers {
-		v.Error(format, a)
+		v.Error(format, a...)
 	}
 }
 
 func Fatal(format string, a ...interface{}) {
 	for _, v := range gGroup.loggers {
-		v.Fatal(format, a)
+		v.Fatal(format, a...)
 	}
 }
 

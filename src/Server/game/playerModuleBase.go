@@ -1,7 +1,7 @@
 package game
 
 import (
-	"GAServer/messages"
+	"gameproto/msgs"
 )
 
 type IPlayerModule interface {
@@ -19,7 +19,7 @@ type IPlayerModule interface {
 	OnDestory()
 
 	//路由消息
-	route(msg *messages.FrameMsg) bool
+	route(msg *msgs.FrameMsg) bool
 
 	//初始化data
 	initData(*Player)
@@ -30,7 +30,6 @@ type PlayerModuleBase struct {
 	msgHandler  map[uint32]MessageFunc
 	isDataDirty bool
 }
-type MessageFunc func(data []byte)
 
 func (m *PlayerModuleBase) initData(p *Player) {
 	m.msgHandler = make(map[uint32]MessageFunc)
@@ -49,7 +48,7 @@ func (m *PlayerModuleBase) SetDataDirty() {
 }
 
 //接口函数
-func (m *PlayerModuleBase) route(msg *messages.FrameMsg) bool {
+func (m *PlayerModuleBase) route(msg *msgs.FrameMsg) bool {
 	if fun, ok := m.msgHandler[msg.MsgId]; ok {
 		fun(msg.RawData)
 		return true

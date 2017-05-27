@@ -1,8 +1,14 @@
 {
 	"ver":"1.0",
+	"db":{
+			"game":"root:tcg123456@tcp(192.168.3.194:3306)/tcg_new"
+	},
+	"design":{
+		"path":"../config/csv/"
+	},
 	"config":{
 		"log":{
-			"level":"debug",
+			"level":"info",
 			"path":"log",
 			"flag":18
 		},
@@ -18,7 +24,7 @@
 					"serviceType":"login",
 					"remoteAddr":"",
 					"conf":{
-							"httpAddr":"127.0.0.1:8080"
+							"httpAddr":"127.0.0.1:9900"
 					}
 			},
 			"center":{

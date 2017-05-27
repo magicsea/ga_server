@@ -52,7 +52,7 @@ type Player struct {
 func TestDB_rui_normal(t *testing.T) {
 	orm.RegisterModel(new(Player))
 	//连接数据库
-	client, err := ConnectDB("root:tcg123456@tcp(192.168.3.194:3306)/test", "default")
+	client, err := ConnectDB("root:tcg123456@tcp(192.168.3.194:3306)/tcg_new", "default")
 	if err != nil {
 		t.Error(err)
 		return
@@ -75,31 +75,30 @@ func TestDB_rui_normal(t *testing.T) {
 		}
 	*/
 	//查询
-	/*
-		p := new(Player)
-		sql1 := fmt.Sprintf("select * from player where uid = ?")
-		err = client.Raw(sql1, []int{1}).QueryRow(&p)
-		if err != nil {
-			t.Error(err)
-			return
+
+	p := new(Player)
+	sql1 := fmt.Sprintf("select * from player where uid = ?")
+	err = client.Raw(sql1, []int{1}).QueryRow(&p)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("select uid:%d, name :%s, Cgid :%d, \nlv :%d, exp :%d, exptime:%u", p.Id, p.Name, p.Cgid, p.Lv, p.Exp, p.Exptime)
+	fmt.Printf("\nplayer uid is 1 %v\n", p)
+	ps := make([]Player, 6)
+	//var Player []ps
+	sql1 = fmt.Sprintf("select * from player where uid >= ?")
+	num, errr := client.Raw(sql1, 5).QueryRows(&ps)
+	if errr != nil {
+		t.Error(errr)
+		return
+	} else {
+		fmt.Printf("共查询到 %d 个玩家\n", num)
+		for index, _ := range ps {
+			fmt.Printf("\n第 %d 玩家信息为：%v", index+1, ps[index])
 		}
-		fmt.Printf("select uid:%d, name :%s, Cgid :%d, \nlv :%d, exp :%d, exptime:%u", p.Id, p.Name, p.Cgid, p.Lv, p.Exp, p.Exptime)
-		fmt.Printf("\nplayer uid is 1 %v\n", p)
-		ps := make([]Player, 6)
-		//var Player []ps
-		sql1 = fmt.Sprintf("select * from player where uid >= ?")
-		num, errr := client.Raw(sql1, []int{5}).QueryRows(&ps)
-		if errr != nil {
-			t.Error(errr)
-			return
-		} else {
-			fmt.Printf("共查询到 %d 个玩家\n", num)
-			for index, _ := range ps {
-				fmt.Printf("\n第 %d 玩家信息为：%v", index+1, ps[index])
-			}
-			fmt.Printf("\n")
-		}
-	*/
+		fmt.Printf("\n")
+	}
+
 	//删除某些记录
 	/*
 		sql = fmt.Sprintf("delete from player WHERE uid = ?;")
@@ -124,7 +123,7 @@ func TestDB_ruiy(t *testing.T) {
 	//数据库 表注册
 	orm.RegisterModel(new(Player))
 	//连接数据库
-	client, err := ConnectDB("root:tcg123456@tcp(192.168.3.194:3306)/test", "default")
+	client, err := ConnectDB("root:tcg123456@tcp(192.168.3.194:3306)/tcg_new", "default")
 	if err != nil {
 		t.Error(err)
 		return
@@ -177,6 +176,7 @@ func TestDB_ruiy(t *testing.T) {
 		}
 		fmt.Println("\nselect data is :", player)
 	*/
+
 }
 
 func TestDB(t *testing.T) {
@@ -186,7 +186,7 @@ func TestDB(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	p := Player{Id: 6, Name: "www", Exp: 1}
+	p := Player{Id: 6000, Name: "www", Exp: 1}
 	client.Insert(&p)
 	if err := client.Read(&p, "Exp"); err != nil {
 		t.Error(err)
@@ -196,6 +196,53 @@ func TestDB(t *testing.T) {
 	client.Update(&p, "Name")
 	//client.Delete(&p, "Exp")
 	t.Log("insert ok :", p)
+}
+
+func Test1(t *testing.T) {
+	/*
+		data := "[600003, 510000, 520000, 709999]"
+		if len(data) > 0 {
+			t := strings.Split(data, "[")
+			te := strings.Split(t[1], "]")
+			tem := strings.Split(te[0], ",")
+			temp := map[int64]int8{}
+			for k, v := range tem {
+				var id int64
+				if k == 0 {
+					id = int64(GDataManager.String2Int32(v))
+				} else {
+					id = int64(GDataManager.String2Int32(v[1:]))
+				}
+				temp[id] = 1
+			}
+			fmt.Printf("_________a___:%v\n", tem)
+			fmt.Printf("_________b___:%v \n", temp)
+		}
+	*/
+	/*
+		fmt.Printf("now time is :%v\n", time.Now().Unix())
+		local := "[12354, 45006,503200]"
+		tt := strings.Split(local, "[")
+		te := strings.Split(tt[1], "]")
+		tem := strings.Split(te[0], ",")
+		fmt.Printf("data is :%v\n\n", tem)
+		for _, v := range tem {
+			//result, _ := strconv.Atoi(v)
+			//fmt.Printf("test data is :%s\n", v)
+			//fmt.Printf("test string2int :%d\n\n", result)
+			r := []rune(v)
+			onelocal := ""
+			for i := 0; i < len(r); i++ {
+				cc, _ := strconv.Atoi(string(r[i]))
+				if cc > 0 || (cc == 0 && i > 0) {
+					onelocal = onelocal + string(r[i])
+				}
+			}
+			ccc, _ := strconv.Atoi(onelocal)
+			fmt.Printf("\nwang get :%d\n", ccc)
+		}
+	*/
+
 }
 
 /*

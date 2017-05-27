@@ -34,7 +34,7 @@ func (a *Agent) Run() {
 			break
 		}
 
-		a.msgHandle(data[0], data[1], data[2:])
+		a.msgHandle(data[0], data[0], data[3:])
 	}
 }
 
@@ -44,13 +44,12 @@ func (a *Agent) OnClose() {
 
 func (a *Agent) WriteMsg(channel byte, msgId byte, msg []byte) {
 
-	data := []byte{channel, msgId}
+	data := []byte{msgId, 0, 0}
 	data = append(data, msg...)
 	err := a.conn.WriteMsg(data)
 	if err != nil {
 		log.Println("write message error:", err)
 	}
-
 }
 
 //func (a *Agent) LocalAddr() net.Addr {

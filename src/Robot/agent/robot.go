@@ -1,9 +1,10 @@
 package agent
 
 import (
-	"GAServer/messages"
 	"GAServer/network"
 	"fmt"
+	"gameproto"
+	_ "gameproto/msgs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -49,20 +50,20 @@ func (robot *Robot) Start(taskCount int) string {
 func (robot *Robot) Login() bool {
 	fmt.Println("login...")
 
-	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:8080/login?a=%s&p=111", robot.account))
+	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:9900/login?a=%s&p=111", robot.account))
 	if err != nil {
 		log.Println("login http.get fail:", err)
 		return false
 	}
 	defer response.Body.Close()
 	body, _ := ioutil.ReadAll(response.Body)
-	result := messages.UserLoginResult{}
+	result := gameproto.UserLoginResult{}
 	umErr := proto.Unmarshal(body, &result)
 	fmt.Println("err:", umErr, "  result:", result)
-	robot.uid = result.Uid
+	robot.uid = uint64(result.Uid)
 	robot.key = result.Key
 	robot.gateAddr = result.GateAddr
-	return result.GetResult() == messages.OK
+	return result.GetResult() == int32(gameproto.OK)
 }
 
 func (robot *Robot) newAgent(conn *network.TCPConn) network.Agent {
@@ -80,6 +81,7 @@ func (robot *Robot) ConnectGate() {
 	robot.client = new(network.TCPClient)
 	robot.client.Addr = robot.gateAddr
 	robot.client.NewAgent = robot.newAgent
+	robot.client.LittleEndian = true
 	//robot.client.AutoReconnect = true
 	robot.client.Start()
 
@@ -87,7 +89,7 @@ func (robot *Robot) ConnectGate() {
 
 func (robot *Robot) OnConnected() {
 	fmt.Println("OnConnected...")
-	robot.SendMsg(messages.Login, 0, &messages.CheckLogin{robot.uid, robot.key})
+	robot.SendMsg(0, &gameproto.PlatformUser{PlatformUid: int32(robot.uid), Key: robot.key})
 }
 
 func (robot *Robot) OnDisconnected() {
@@ -98,7 +100,7 @@ func (robot *Robot) OnDisconnected() {
 func (robot *Robot) EnterGame() {
 	fmt.Println("EnterGame...")
 
-	robot.SendMsg(messages.Shop, byte(messages.C2S_ShopBuy), &messages.C2S_ShopBuyMsg{1})
+	robot.SendMsg(byte(gameproto.C2S_Test), &gameproto.C2S_TestMsg{1})
 	//robot.SendMsg(messages.Chat, byte(messages.C2S_PrivateChat), &messages.C2S_PrivateChatMsg{"玩家11", "hello"})
 	//robot.SendMsg(messages.Chat, byte(messages.C2S_WorldChat), &messages.C2S_WorldChatMsg{"world"})
 }
@@ -109,58 +111,91 @@ func (robot *Robot) OnErr(err string) {
 	//robot.SendMsg(messages.Shop, byte(messages.C2S_ShopBuy), &messages.C2S_ShopBuyMsg{1})
 }
 func (robot *Robot) OnMsgRecv(channel byte, msgId byte, data []byte) {
-	c := messages.ChannelType(channel)
+	//c := gameproto.ChannelType(channel)
 	//fmt.Println("OnMsgRecv:", c, " msg:", msgId, " data:", len(data))
-	if c == messages.Login {
-		msg := messages.CheckLoginResult{}
+
+	tmsgId := gameproto.GS2C_CMD(msgId)
+	switch tmsgId {
+	case gameproto.S2C_CONFIRM:
+		msg := gameproto.S2C_ConfirmInfo{}
+		proto.Unmarshal(data, &msg)
+		//fmt.Println("S2C_CONFIRM:", msg)
+	case gameproto.S2C_LOGIN_END:
+		msg := gameproto.LoginReturn{}
 		proto.Unmarshal(data, &msg)
 		fmt.Println("login result:", msg)
-		if msg.Result == messages.OK {
+		if msg.ErrCode == int32(gameproto.OK) {
 			robot.EnterGame()
 		}
-	} else if c == messages.Shop {
-		tmsgId := messages.ShopMsgType(msgId)
-		switch tmsgId {
-		case messages.S2C_ShopBuy:
-			msg := messages.S2C_ShopBuyMsg{}
-			proto.Unmarshal(data, &msg)
-			//fmt.Println("shop result:", msg)
-			if robot.taskCounter > robot.taskCount {
-				robot.Finish("OK")
-			}
-			if robot.actionTime > 0 {
-				time.Sleep(robot.actionTime)
-			}
+	case gameproto.S2C_Test:
+		msg := gameproto.S2C_TestMsg{}
+		proto.Unmarshal(data, &msg)
+		//fmt.Println("S2C_Test result:", msg)
 
-			robot.taskCounter++
-			robot.SendMsg(messages.Shop, byte(messages.C2S_ShopBuy), &messages.C2S_ShopBuyMsg{1})
+		if robot.taskCounter > robot.taskCount {
+			robot.Finish("OK")
 		}
-	} else if c == messages.Chat {
-		tmsgId := messages.ChatMsgType(msgId)
-		switch tmsgId {
-		case messages.S2C_PrivateChat:
-			msg := messages.S2C_PrivateChatMsg{}
-			proto.Unmarshal(data, &msg)
-			fmt.Println("chat back result:", msg)
-		case messages.S2C_PrivateOtherChat:
-			msg := messages.S2C_PrivateOtherChatMsg{}
-			proto.Unmarshal(data, &msg)
-			fmt.Println("otherchat:", msg)
-		case messages.S2C_WorldChat:
-			msg := messages.S2C_WorldChatMsg{}
-			proto.Unmarshal(data, &msg)
-			fmt.Println("worldchat :", msg)
+		if robot.actionTime > 0 {
+			time.Sleep(robot.actionTime)
 		}
+
+		robot.taskCounter++
+		//time.Sleep(time.Second)
+		robot.SendMsg(byte(gameproto.C2S_Test), &gameproto.C2S_TestMsg{Id: 1})
 	}
+
+	/*
+		if c == messages.Login {
+			msg := messages.CheckLoginResult{}
+			proto.Unmarshal(data, &msg)
+			fmt.Println("login result:", msg)
+			if msg.Result == messages.OK {
+				robot.EnterGame()
+			}
+		} else if c == messages.Shop {
+			tmsgId := messages.ShopMsgType(msgId)
+			switch tmsgId {
+			case messages.S2C_ShopBuy:
+				msg := messages.S2C_ShopBuyMsg{}
+				proto.Unmarshal(data, &msg)
+				//fmt.Println("shop result:", msg)
+				if robot.taskCounter > robot.taskCount {
+					robot.Finish("OK")
+				}
+				if robot.actionTime > 0 {
+					time.Sleep(robot.actionTime)
+				}
+
+				robot.taskCounter++
+				robot.SendMsg(messages.Shop, byte(messages.C2S_ShopBuy), &messages.C2S_ShopBuyMsg{1})
+			}
+		} else if c == messages.Chat {
+			tmsgId := messages.ChatMsgType(msgId)
+			switch tmsgId {
+			case messages.S2C_PrivateChat:
+				msg := messages.S2C_PrivateChatMsg{}
+				proto.Unmarshal(data, &msg)
+				fmt.Println("chat back result:", msg)
+			case messages.S2C_PrivateOtherChat:
+				msg := messages.S2C_PrivateOtherChatMsg{}
+				proto.Unmarshal(data, &msg)
+				fmt.Println("otherchat:", msg)
+			case messages.S2C_WorldChat:
+				msg := messages.S2C_WorldChatMsg{}
+				proto.Unmarshal(data, &msg)
+				fmt.Println("worldchat :", msg)
+			}
+		}
+	*/
 }
 
-func (robot *Robot) SendMsg(channel messages.ChannelType, msgId byte, pb proto.Message) {
+func (robot *Robot) SendMsg(msgId byte, pb proto.Message) {
 	data, err := proto.Marshal(pb)
 	if err != nil {
 		fmt.Println("###EncodeMsg error:", err)
 		return
 	}
-	robot.agent.WriteMsg(byte(channel), msgId, data)
+	robot.agent.WriteMsg(byte(0), msgId, data)
 }
 
 func (robot *Robot) Finish(result string) {

@@ -2,9 +2,12 @@ package main
 
 import (
 	"GAServer/app"
-	"GAServer/gate"
 	"Server/center"
+	"Server/cluster"
+	"Server/config"
+	"Server/db"
 	"Server/game"
+	"Server/gate"
 	"Server/login"
 	"Server/session"
 	"flag"
@@ -20,7 +23,7 @@ var (
 
 func main() {
 	flag.Parse()
-	conf, err := LoadConfig(*confPath)
+	conf, err := config.LoadConfig(*confPath)
 	if err != nil {
 		log.Println("load config err:", err)
 		return
@@ -31,7 +34,6 @@ func main() {
 	app.RegisterService(gate.Type(), gate.Service)
 	app.RegisterService(game.Type(), game.Service)
 	log.Println("===Run===", conf)
-	app.Run(&conf.Base)
+	app.Run(&conf.Base, cluster.New(), db.NewMgr())
 	log.Println("===GameOver===")
-
 }

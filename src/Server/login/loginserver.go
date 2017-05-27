@@ -1,16 +1,20 @@
 package login
 
 import (
-	"GAServer/cluster"
 	"GAServer/config"
-	"GAServer/messages"
+	"GAServer/log"
 	"GAServer/service"
+	"Server/cluster"
 	"fmt"
-	"log"
+	"gameproto/msgs"
 	"net/http"
-	"strings"
+
+	_ "Server/db"
+	"gameproto"
 
 	"strconv"
+	"strings"
+	_ "time"
 
 	"github.com/gogo/protobuf/proto"
 )
@@ -35,6 +39,7 @@ func (s *LoginService) OnReceive(context service.Context) {
 func (s *LoginService) OnInit() {
 
 }
+
 func (s *LoginService) OnStart(as *service.ActorService) {
 	//as.RegisterMsg(reflect.TypeOf(&messages.UserLogin{}), s.OnUserLogin) //注册登录
 
@@ -56,26 +61,58 @@ func (s *LoginService) OnStart(as *service.ActorService) {
 func login(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	if req.Form["a"] == nil || req.Form["p"] == nil {
-		log.Println("a,p is empty:", req.Form)
+		log.Error("a,p is empty:", req.Form)
 		return
 	}
-	acc := req.Form["a"][0]
-	//_ := req.Form["p"][0]
+	//账号
+	acc := ""
+	if al, ok := req.Form["a"]; ok {
+		acc = al[0]
+	}
+	//pwd := ""
+	//if pl, ok := req.Form["i"]; ok {
+	//	pwd = pl[0]
+	//}
 
 	//验证 here...
 	log.Println("login account:", acc)
 	strs := strings.Split(acc, "_")
 	id, _ := strconv.Atoi(strs[1])
-	resp, err := cluster.GetServicePID("session").Ask(&messages.UserLogin{acc, uint64(id)})
+	//now := time.Now().Unix()
+	//user := &db.User{PlatformId: acc, LastLoginTime: now}
+	//var id uint64
+	//norow, e := db.GetGameDB().Read(user, "PlatformId")
+	//if e != nil && !norow {
+	//	loginBackError(w, e)
+	//	return
+	//}
+
+	//user.LastLoginTime = now
+	//if norow {
+	//新用户ErrNoRows
+	//	user.RegisterTime = now
+	//	db.GetGameDB().Insert(user)
+	//} else {
+	//老用户
+	//	db.GetGameDB().Update(user, "LastLoginTime")
+	//}
+
+	//id = user.Id
+
+	resp, err := cluster.GetServicePID("session").Ask(&msgs.UserLogin{acc, uint64(id)})
 	if err == nil {
-		var s, _ = proto.Marshal(resp.(*messages.UserLoginResult))
+		var s, _ = resp.(*gameproto.UserLoginResult).Marshal()
 		//var s, _ = json.Marshal(resp)
 		w.Write(s)
-		log.Println("login ok:", resp)
+		log.Info("login ok:msg=%v", resp)
 	} else {
-		result := messages.UserLoginResult{Result: messages.Error}
-		var s, _ = proto.Marshal(&result)
-		w.Write(s)
+		loginBackError(w, err)
 		log.Println("login error:", acc, err)
 	}
+}
+
+func loginBackError(w http.ResponseWriter, e error) {
+	log.Error("create user db :%v", e)
+	d, _ := proto.Marshal(&gameproto.UserLoginResult{Result: int32(msgs.Error)})
+	w.Write(d)
 }

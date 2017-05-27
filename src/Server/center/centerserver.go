@@ -2,9 +2,8 @@ package center
 
 import (
 	"GAServer/log"
-	"GAServer/messages"
 	"GAServer/service"
-
+	"gameproto/msgs"
 	"reflect"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -27,7 +26,7 @@ func Type() string {
 
 //以下为接口函数
 func (s *CenterService) OnReceive(context service.Context) {
-	log.Println("center.OnReceive:", context.Message())
+	log.Debug("center.OnReceive:%v", context.Message())
 
 }
 
@@ -37,18 +36,18 @@ func (s *CenterService) OnInit() {
 }
 
 func (s *CenterService) OnStart(as *service.ActorService) {
-	//as.RegisterMsg(reflect.TypeOf(&messages.RemoveService{}), s.OnRemoveService)  //解注册服务器
-	as.RegisterMsg(reflect.TypeOf(&messages.AddService{}), s.OnAddService)          //注册服务器
+	//as.RegisterMsg(reflect.TypeOf(&msgs.RemoveService{}), s.OnRemoveService)  //解注册服务器
+	as.RegisterMsg(reflect.TypeOf(&msgs.AddService{}), s.OnAddService)              //注册服务器
 	as.RegisterMsg(reflect.TypeOf(&actor.Terminated{}), s.OnChildServiceTerminated) //被动断开服务器
-	as.RegisterMsg(reflect.TypeOf(&messages.UploadService{}), s.OnUpdateService)    //更新服务器
-	as.RegisterMsg(reflect.TypeOf(&messages.ApplyService{}), s.OnApplyService)      //获取一个服务器
-	as.RegisterMsg(reflect.TypeOf(&messages.GetTypeServices{}), s.GetTypeServices)  //获取一类服务器
+	as.RegisterMsg(reflect.TypeOf(&msgs.UploadService{}), s.OnUpdateService)        //更新服务器
+	as.RegisterMsg(reflect.TypeOf(&msgs.ApplyService{}), s.OnApplyService)          //获取一个服务器
+	as.RegisterMsg(reflect.TypeOf(&msgs.GetTypeServices{}), s.GetTypeServices)      //获取一类服务器
 }
 
 //注册服务器
 func (s *CenterService) OnAddService(context service.Context) {
 	log.Println("center.OnAddService:", context.Message())
-	msg := context.Message().(*messages.AddService)
+	msg := context.Message().(*msgs.AddService)
 	var group *ServiceGroup
 	if g, ok := s.serviceGroups[msg.ServiceType]; !ok {
 		group = new(ServiceGroup)
@@ -63,21 +62,21 @@ func (s *CenterService) OnAddService(context service.Context) {
 		serviceType: msg.ServiceType,
 		serviceName: msg.ServiceName,
 		load:        0,
-		state:       messages.ServiceStateFree,
+		state:       msgs.ServiceStateFree,
 		values:      msg.Values}
 
 	s.serviceAll[node.pid.String()] = node //加入索引
 	group.AddService(node)                 //加入group
 	context.Watch(node.pid)                //监控
 
-	context.Tell(context.Sender(), &messages.SendOK{})
+	context.Tell(context.Sender(), &msgs.SendOK{})
 	log.Println("center.OnAddService  OK,", msg.ServiceName)
 }
 
 //解注册服务器
 func (s *CenterService) __OnRemoveService(context service.Context) {
 	log.Println("center.OnRemoveService:", context.Message())
-	msg := context.Message().(*messages.RemoveService)
+	msg := context.Message().(*msgs.RemoveService)
 
 	var group *ServiceGroup
 	if g, ok := s.serviceGroups[msg.ServiceType]; !ok {
@@ -116,8 +115,8 @@ func (s *CenterService) OnChildServiceTerminated(context service.Context) {
 
 //更新服务器
 func (s *CenterService) OnUpdateService(context service.Context) {
-	log.Println("center.OnUpdateService:", context.Message())
-	msg := context.Message().(*messages.UploadService)
+	log.Debug("center.OnUpdateService:%v", context.Message())
+	msg := context.Message().(*msgs.UploadService)
 
 	if sv, ok := s.serviceAll[msg.ServiceName]; ok {
 		sv.load = msg.Load
@@ -127,25 +126,25 @@ func (s *CenterService) OnUpdateService(context service.Context) {
 
 //获取一个服务器
 func (s *CenterService) OnApplyService(context service.Context) {
-	log.Println("center.OnApplyService:", context.Message())
-	msg := context.Message().(*messages.ApplyService)
+	log.Debug("center.OnApplyService:%v", context.Message())
+	msg := context.Message().(*msgs.ApplyService)
 	var group *ServiceGroup
 	if g, ok := s.serviceGroups[msg.ServiceType]; !ok {
 		log.Error("OnApplyService,no found service Type:%v", msg.ServiceType)
-		context.Sender().Tell(&messages.ApplyServiceResult{Result: messages.Error})
+		context.Sender().Tell(&msgs.ApplyServiceResult{Result: msgs.Error})
 		return
 	} else {
 		group = g
 	}
 	sv := group.GetBestService()
-	resultMsg := &messages.ApplyServiceResult{ServiceType: msg.ServiceType}
+	resultMsg := &msgs.ApplyServiceResult{ServiceType: msg.ServiceType}
 	if sv != nil {
-		resultMsg.Result = messages.OK
+		resultMsg.Result = msgs.OK
 		resultMsg.Pid = sv.pid
 		resultMsg.ServiceName = sv.serviceName
 		resultMsg.Values = sv.values
 	} else {
-		resultMsg.Result = messages.Fail
+		resultMsg.Result = msgs.Fail
 		log.Error("OnApplyService have no service:%v", msg.ServiceType)
 	}
 	context.Sender().Tell(resultMsg)
@@ -153,18 +152,18 @@ func (s *CenterService) OnApplyService(context service.Context) {
 
 //获取一类服务器
 func (s *CenterService) GetTypeServices(context service.Context) {
-	log.Println("center.GetTypeServices:", context.Message())
-	msg := context.Message().(*messages.GetTypeServices)
+	log.Debug("center.GetTypeServices:", context.Message())
+	msg := context.Message().(*msgs.GetTypeServices)
 	var group *ServiceGroup
 	if g, ok := s.serviceGroups[msg.ServiceType]; !ok {
 		log.Error("GetTypeServices,no found service Type:%v", msg.ServiceType)
-		context.Sender().Tell(&messages.GetTypeServicesResult{})
+		context.Sender().Tell(&msgs.GetTypeServicesResult{})
 		return
 	} else {
 		group = g
 	}
 
-	resultMsg := &messages.GetTypeServicesResult{}
+	resultMsg := &msgs.GetTypeServicesResult{}
 	for _, v := range group.services {
 		resultMsg.Pids = append(resultMsg.Pids, v.pid)
 	}

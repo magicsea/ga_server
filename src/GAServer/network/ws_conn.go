@@ -1,11 +1,12 @@
 package network
 
 import (
+	"GAServer/log"
 	"errors"
-	"github.com/gorilla/websocket"
-	"github.com/name5566/leaf/log"
 	"net"
 	"sync"
+
+	"github.com/gorilla/websocket"
 )
 
 type WebsocketConnSet map[*websocket.Conn]struct{}

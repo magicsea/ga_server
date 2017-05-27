@@ -54,7 +54,7 @@ func (s *ActorService) Receive(context actor.Context) {
 	case *actor.Restarting:
 		fmt.Println("Restarting, actor is about restart")
 	default:
-		fmt.Println("recv defalult:", msg)
+		log.Debug("recv defalult:", msg)
 		s.serviceIns.OnReceive(context.(Context))
 		fun := s.rounter[reflect.TypeOf(msg)]
 		if fun != nil {
