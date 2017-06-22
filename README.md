@@ -28,4 +28,4 @@ login使用http协议和客户端沟通，其他请求通过gate转发
 - battleserver实现
 - gate加密
 - ...
-##QQ群：285728047
+## QQ群：285728047
