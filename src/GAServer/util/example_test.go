@@ -1,8 +1,8 @@
 package util_test
 
 import (
+	"GAServer/util"
 	"fmt"
-	"github.com/name5566/leaf/util"
 )
 
 func ExampleMap() {
