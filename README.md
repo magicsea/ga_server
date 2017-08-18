@@ -20,7 +20,7 @@
 ## 登录流程
 红色为单点，其他都是多点。
 login使用http协议和客户端沟通，其他请求通过gate转发
-![image](http://www.processon.com/chart_image/58f6d36be4b02e95ec64c368.png)
+![image](http://on-img.com/chart_image/58f6d36be4b02e95ec64c368.png)
 
 ## 依赖
 主要依赖protoactor里的库，具体参考protoactor的readme。简单的直接使用LiteIde执行go get一下就自动下载。google的几个库需要科学上网，没条件的下载我网盘里的[ google库](http://pan.baidu.com/s/1qYjUHJY)
