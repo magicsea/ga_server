@@ -1,4 +1,6 @@
-# 停止维护。请移步新的项目 demo: https://github.com/magicsea/h5game golang库：https://github.com/magicsea/ganet
+# 停止维护。请移步新的项目 
+- demo: https://github.com/magicsea/h5game 
+- golang库：https://github.com/magicsea/ganet
 
 # ga_server
 
