@@ -1,3 +1,5 @@
+#停止维护。移步新的项目 https://github.com/magicsea/ganet
+
 # ga_server
 
 基于protoactor框架的actor游戏服务器。
